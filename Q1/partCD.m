@@ -1,6 +1,6 @@
 function [] = partCD()
   % Robot state
-  robotOrigin = [2; 3.5];
+  robotOrigin = [3; 3.5];
   robotState = [0; 0; 0; 0];
 
   % Wand state
@@ -8,6 +8,7 @@ function [] = partCD()
   wandState = [0; 0; 0; 0];
 
   dTime = 1 / 100;
+  T = [0:dTime:12];
 
   % Motion model
   mass = 5;
@@ -40,16 +41,40 @@ function [] = partCD()
   wandMu = wandState;
   wandCovarience = R;
 
+  % LQR Costs
+  LQR_Q = eye(4) * 100.0;
+  % only care about position
+  % LQR_Q(3,3)=0;
+  % LQR_q(4,4)=0;
+  LQR_R = eye(2) * 0.0001;
+
+  % LQR Costate setup
+  P = zeros(2, 2, length(T));
+  P_S(:,:,length(T)) = LQR_Q;
+  Pn = P_S(:,:,length(T));
+  for i = length(T)-1:-1:1
+      P = LQR_Q + A'*Pn*A - A'*Pn*B * inv(B'*Pn*B + LQR_R) * B'*Pn*A;
+      P_S(:,:,i) = P;
+      Pn=P;
+  end
+  
   clf;
   hold on;
-  axis([0 6 0 5]);
+  axis([0 5 0 6]);
 
-  for time = [0:dTime:10]
-    iX = sin(2*time);
-    iY = -2*cos(2*time);
+  for i = 1:(length(T)-1)
+    time = T(i);
 
+    % find the LQR gains
+    K = inv(B' * P_S(:,:,i+1) * B + LQR_R) * B' * P_S(:,:,i+1) * A;
+
+    % the state I want the robot to track
+    setPoint = wandMu * 3;
+    error = setPoint - robotMu;
+    
+    % Apply the LQR controller
+    robotInput = K*error;
     % update the states with noise
-    robotInput = [iX; iY];
     robotState = A * robotState + B * robotInput + sqrtR * randn(4, 1);
 
     wandOffset = getWandOffset(time);
@@ -76,8 +101,7 @@ function [] = partCD()
     
     wandK = wandPredictionCovarience * C' * inv(C * wandPredictionCovarience * C' + Q);
     wandMu = wandPredictionMu + wandK * (wandMeasurements - C * wandPredictionMu);
-    wandCovarience = (eye(4) - wandK * C) * wandPredictionCovarience;
-    
+    wandCovarience = (eye(4) - wandK * C) * wandPredictionCovarience;    
     
     robotPosition = robotState(1:2)+robotOrigin;
     wandPosition = wandState(1:2)+wandOrigin;
