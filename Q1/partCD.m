@@ -60,7 +60,7 @@ function [] = partCD()
   
   clf;
   hold on;
-  axis([0 5 0 6]);
+  axis([0 6 0 6]);
 
   for i = 1:(length(T)-1)
     time = T(i);
