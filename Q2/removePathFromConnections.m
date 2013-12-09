@@ -1,7 +1,10 @@
 function [new_connections] = removePathFromConnections(path, connections)
   new_connections = connections;
-  for i = [1:length(path)-1]
-    new_connections(path(i), path(i+1)) = 0;
-    new_connections(path(i+1), path(i)) = 0;
+  % no other path may enter any of the nodes in this path
+  % thay may exit though (to fix depot-leaving issues)
+  for i = [1:length(path)]
+    for j = [1:length(connections)]
+      new_connections(j, path(i)) = 0;
+    end
   end
 end
