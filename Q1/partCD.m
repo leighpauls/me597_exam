@@ -1,0 +1,87 @@
+function [] = partCD()
+  % Robot state
+  robotOrigin = [2; 3.5];
+  robotState = [0; 0; 0; 0];
+
+  % Wand state
+  wandOrigin = [3; 1];
+  wandState = [0; 0; 0; 0];
+
+  dTime = 1 / 100;
+
+  % Motion model
+  mass = 5;
+  Ki = 2.4;
+  A = [ 1 0 dTime 0;
+        0 1 0 dTime;
+        0 0 1 0;
+        0 0 0 1 ];
+  B = [ 0 0;
+        0 0;
+        Ki (-0.2*Ki);
+        (-0.2*Ki) Ki ] * dTime / mass;
+  R = [0.000002 0 0 0;
+       0 0.000002 0 0;
+       0 0 0.000004 0;
+       0 0 0 0.000004 ];
+  sqrtR = sqrt(R);
+        
+  % Measurement model
+  C = [ 1 0 0 0;
+        0 1 0 0 ];
+  Q = [0.0001 0;
+       0 0.0001 ];
+  sqrtQ = sqrt(Q);
+  
+  % Use an accurate prior
+  robotMu = robotState;
+  robotCovarience = R;
+
+  wandMu = wandState;
+  wandCovarience = R;
+
+  clf;
+  hold on;
+  axis([0 6 0 5]);
+
+  for time = [0:dTime:10]
+    iX = sin(2*time);
+    iY = -2*cos(2*time);
+
+    % update the states with noise
+    robotInput = [iX; iY];
+    robotState = A * robotState + B * robotInput + sqrtR * randn(4, 1);
+
+    wandOffset = getWandOffset(time);
+    wandState = [ wandOffset(1);
+                  wandOffset(2);
+                  (wandOffset(1) - wandState(1)) / dTime;
+                  (wandOffset(2) - wandState(2)) / dTime ];
+
+    % take a measurement of the states
+    robotMeasurements = C * robotState + sqrtQ * randn(2, 1);
+    wandMeasurements = C * wandState + sqrtQ * randn(2, 1);
+
+    % prediction update
+    robotPredictionMu = A * robotMu + B * robotInput;
+    robotPredictionCovarience = A*robotCovarience*A' + R;
+
+    wandPredictionMu = A * wandMu;
+    wandPredictionCovarience = A*wandCovarience*A' + R;
+
+    % measurement update
+    robotK = robotPredictionCovarience * C' * inv(C * robotPredictionCovarience * C' + Q);
+    robotMu = robotPredictionMu + robotK * (robotMeasurements - C * robotPredictionMu);
+    robotCovarience = (eye(4) - robotK * C) * robotPredictionCovarience;
+    
+    wandK = wandPredictionCovarience * C' * inv(C * wandPredictionCovarience * C' + Q);
+    wandMu = wandPredictionMu + wandK * (wandMeasurements - C * wandPredictionMu);
+    wandCovarience = (eye(4) - wandK * C) * wandPredictionCovarience;
+    
+    
+    robotPosition = robotState(1:2)+robotOrigin;
+    wandPosition = wandState(1:2)+wandOrigin;
+    scatter(robotPosition(1), robotPosition(2), 'b');
+    scatter(wandPosition(1), wandPosition(2), 'g');
+  end
+end
