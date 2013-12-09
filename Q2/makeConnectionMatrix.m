@@ -23,9 +23,6 @@ function [connectionMatrix] = makeConnectionMatrix(IDX25, IDXout25, IDX50, IDXou
       end
       % all lower plane nodes are connected upwards
       connections{sourceIdx} = cat(2, connections{sourceIdx}, sourceIdx + numNodes);
-      length(connections)
-      sourceIdx
-      numNodes
       connections{sourceIdx + numNodes} = cat(2, connections{sourceIdx + numNodes}, sourceIdx);
   end
 

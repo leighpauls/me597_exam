@@ -16,6 +16,7 @@ spacing = 0.5; % 0.1 km spacing
 [xgrid,ygrid] = meshgrid(0:spacing:X,0:spacing:Y);
 [n,m] = size(xgrid);
 nodes = [reshape(xgrid,n*m,1) reshape(ygrid,n*m,1)];
+node_locations = nodes;
 
 % Building nodes map
 buildings25 = [.5 2; .5 3; 1 3; 1 2; NaN NaN;
