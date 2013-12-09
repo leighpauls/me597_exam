@@ -3,6 +3,9 @@ function [connectionMatrix] = makeConnectionMatrix(IDX25, IDXout25, IDX50, IDXou
   for i = [1:length(IDXout25)]
       sourceIdx = IDXout25(i);
       upperPlaneConnections{sourceIdx} = IDX50{i};
+      for j = [1:length(upperPlaneConnections{sourceIdx})]
+        upperPlaneConnections{sourceIdx}(j) = IDXout50(upperPlaneConnections{sourceIdx}(j));
+      end
   end
 
   connections = {};
@@ -15,6 +18,9 @@ function [connectionMatrix] = makeConnectionMatrix(IDX25, IDXout25, IDX50, IDXou
   for i = [1:length(IDXout25)]
       sourceIdx = IDXout25(i);
       connections{sourceIdx} = IDX25{i};
+      for j = [1:length(connections{sourceIdx})]
+        connections{sourceIdx}(j) = IDXout25(connections{sourceIdx}(j));
+      end
       % all lower plane nodes are connected upwards
       connections{sourceIdx} = cat(2, connections{sourceIdx}, sourceIdx + numNodes);
       connections{sourceIdx + numNodes} = cat(2, connections{sourceIdx + numNodes}, sourceIdx);
