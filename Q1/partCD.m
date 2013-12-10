@@ -44,8 +44,6 @@ function [] = partCD()
   % LQR Costs
   LQR_Q = eye(4) * 100.0;
   % only care about position
-  % LQR_Q(3,3)=0;
-  % LQR_q(4,4)=0;
   LQR_R = eye(2) * 0.0001;
 
   % LQR Costate setup

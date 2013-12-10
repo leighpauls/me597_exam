@@ -3,7 +3,7 @@ maps();
 depot_nodes = nodesFromLocations(nodes, depots);
 drop_nodes = nodesFromLocations(nodes, drops);
 connections = makeConnectionMatrix(IDX25, IDXout25, IDX50, IDXout50);
-color_strings = ['y' 'c' 'r' 'g' 'k' 'y' 'c' 'r' 'g' 'k'];
+color_strings = ['y' 'c' 'g' 'r' 'k' 'k' 'g' 'r' 'c' 'y'];
 
 % build the future deliveries
 future_deliveries = [];
@@ -22,22 +22,26 @@ deliveries_in_flight = [];
 returns_in_flight = [];
 
 cur_time = 0;
+total_flight_time = 0;
 
 while length(future_deliveries) > 0 || length(deliveries_in_flight) > 0 || length(returns_in_flight) > 0
+% while cur_time < 39
   % check for new deliveries
   i = 1;
   while i <= length(future_deliveries)
     delivery = future_deliveries(i);
     if cur_time >= delivery.start_time
       path = findPath(connections, depot_nodes(delivery.depot_idx), drop_nodes(delivery.drop_idx));
-      plotPath(path, length(node_locations), node_locations, delivery.color);
+      % plotPath(path, length(node_locations), node_locations, delivery.color);
       [connections aquired_connections] = aquirePathFromConnections(path, connections);
       flight_time = getFlightTime(path);
-      
+      total_flight_time = total_flight_time + flight_time;
+
       % create a delivery in flight
       in_flight = rmfield(delivery, 'start_time');
       in_flight.end_time = delivery.start_time + flight_time;
       in_flight.aquired_connections = aquired_connections;
+      in_flight.path = path;
 
       % add the new delivery flight
       deliveries_in_flight = cat(1, deliveries_in_flight, in_flight);
@@ -58,13 +62,15 @@ while length(future_deliveries) > 0 || length(deliveries_in_flight) > 0 || lengt
       connections = releasePathFromConnections(delivery.aquired_connections, connections);
       % make a new path home
       path = findPath(connections, drop_nodes(delivery.drop_idx), depot_nodes(delivery.depot_idx));
-      plotPath(path, length(node_locations), node_locations, delivery.color);
+      % plotPath(path, length(node_locations), node_locations, delivery.color);
       [connections aquired_connections] = aquirePathFromConnections(path, connections);
       flight_time = getFlightTime(path);
+      total_flight_time = total_flight_time + flight_time;
 
       return_flight = delivery;
       return_flight.end_time = cur_time + flight_time;
       return_flight.aquired_connections = aquired_connections;
+      return_flight.path = path;
       
       % add the new return flight
       returns_in_flight = cat(1, returns_in_flight, return_flight);
@@ -89,6 +95,19 @@ while length(future_deliveries) > 0 || length(deliveries_in_flight) > 0 || lengt
       i = i + 1;
     end
   end
-
   cur_time = cur_time + 1;
 end
+
+plotLower();
+plotUpper();
+for i = [1:length(deliveries_in_flight)]
+  delivery = deliveries_in_flight(i);
+  plotPath(delivery.path, length(node_locations), node_locations, delivery.color);
+end
+for i = [1:length(returns_in_flight)]
+  delivery = returns_in_flight(i);
+  plotPath(delivery.path, length(node_locations), node_locations, delivery.color);
+end
+
+total_flight_time
+
