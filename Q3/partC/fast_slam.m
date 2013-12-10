@@ -81,40 +81,42 @@ for t=2:length(T)
     meas_ind = [];
     for i=1:M
         if(inview(map(:,i),xr(:,t),rmax,thmax))
-          descriptor = normrnd(i, sqrt(0.1));
-          feature_idx = round(descriptor);
-          % wrap-around for array protection
-          if feature_idx < 1
-            feature_idx = feature_idx + M;
-          elseif feature_idx > M
-            feature_idx = feature_idx - M;
-          end
-          if not(feature_idx == i)
-            % figure(1);
-            % hold on;
-            % plot([map(1,i); map(1,feature_idx)], [map(2,i); map(2, feature_idx)], 'b');
-            % keyboard;
-          end
-
-          meas_ind=[meas_ind,feature_idx];
+          meas_ind = [meas_ind, i];
         end
     end
     
     % Take measurements
-    unrejected_y = [];
-    num_unrejected_measurements = length(meas_ind);
-    for i = meas_ind
+    y = [];
+    for j = [1:length(meas_ind)]
+        i = meas_ind(j);
         % Select a measurement disturbance
         delta = QiE*sqrt(Qie)*randn(m,1);
         % Determine measurement, add to measurement vector
-        unrejected_y = [unrejected_y, [sqrt((map(1,i)-xr(1,t))^2 + (map(2,i)-xr(2,t))^2);
-                                       mod(atan2(map(2,i)-xr(2,t),map(1,i)-xr(1,t))-xr(3,t)+pi,2*pi)-pi] + delta];
+        y = [y, [sqrt((map(1,i)-xr(1,t))^2 + (map(2,i)-xr(2,t))^2);
+                 mod(atan2(map(2,i)-xr(2,t),map(1,i)-xr(1,t))-xr(3,t)+pi,2*pi)-pi] + delta];
+
+        descriptor = normrnd(i, sqrt(0.1));
+        feature_idx = round(descriptor);
+        % wrap-around for array protection
+        if feature_idx < 1
+          feature_idx = feature_idx + M;
+        elseif feature_idx > M
+          feature_idx = feature_idx - M;
+        end
+
+        % does the measured feature index need to be changed?
+        if not(feature_idx == i)
+          meas_ind(j) = feature_idx;
+          % figure(1);
+          % hold on;
+          plot([map(1,i); map(1,feature_idx)], [map(2,i); map(2, feature_idx)], 'b');
+          % keyboard;
+        end
     end
     
-    
-    % update the particle positions for motion and find the mean prediction state
-    Xp_mean = zeros(n, 1);
     % For each particle
+    Xp_mean = zeros(n, 1);
+    feature_means = zeros(2, length(meas_ind));
     for d=1:D
         % Select a motion disturbance
         em = RE*sqrt(Re)*randn(n,1);
@@ -122,20 +124,48 @@ for t=2:length(T)
         Xp(:,d) = [X(1,d)+u(1,t)*cos(X(3,d))*dt;
                   X(2,d)+u(1,t)*sin(X(3,d))*dt;
                   X(3,d)+u(2,t)*dt] + em;
-        % contribute to the mean prediction position
+        % contribute to the robot position mean
         Xp_mean = Xp_mean + Xp(:,d) / D;
+        % contribute to the measured particles' position means
+        for j = [1:length(meas_ind)]
+          i = meas_ind(j);
+          if not(newfeature(i))
+            feature_means(:,j) = feature_means(:,j) + mu(:,i,d) / D;
+          end
+        end
     end
 
-    % using the mean prediction state, eliminate feature measurements that
-    % seem too far from where they were last seen.
-    % TODO: new features must be seen twice in rougly the same place before they can be acknowledged
-    y = [];
-    for i = [1:num_unrejected_measurements]
-        y = [y, unrejected_y(:,i)];
-    end
+    % outlier removal
+    j = 1;
+    while j < length(meas_ind)
+      i = meas_ind(j);
+      if not(newfeature(i))
+         % where does this measurement put j?
+         measuredX = Xp_mean(1) + y(1,j) * cos(y(2,j) + Xp_mean(3));
+         measuredY = Xp_mean(2) + y(1,j) * sin(y(2,j) + Xp_mean(3));
 
+         % where do I think the feature currently is?
+         expectedX = feature_means(1, j);
+         expectedY = feature_means(2, j);
+         
+         if hypot(expectedX - measuredX, expectedY - measuredY) > 2
+           % plot where this feature should be vs where it was found
+           plot([measuredX expectedX], [measuredY expectedY], 'r');         
+           % this feature is an outlier, remove it
+           old_len = length(meas_ind);
+           meas_ind = [meas_ind(1:j-1), meas_ind(j+1:old_len)];
+           y = [y(:,1:j-1), y(:,j+1:old_len)];
+           feature_means = [feature_means(:,1:j-1), feature_means(:,j+1:old_len)];
+         else
+           j = j + 1;
+         end
+      else
+        j = j + 1;
+      end
+    end
+    
     %% Fast SLAM Filter Estimation
-    % For each particle
+
     for d=1:D
         % For each feature measured
         clear yw hmuw Qw;
@@ -216,7 +246,6 @@ for t=2:length(T)
     % for j = 1:M
     %   plot(map(1,j),map(2,j),'o','Color', cmap(mod(j,cn)+1,:), 'MarkerSize',10,'LineWidth',2);
     % end
-
     X_mean = zeros(n, 1);
     for d=1:D
         plot(X(1,d),X(2,d),'b.');
