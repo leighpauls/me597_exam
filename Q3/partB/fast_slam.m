@@ -107,10 +107,10 @@ for t=2:length(T)
         % does the measured feature index need to be changed?
         if not(feature_idx == i)
           meas_ind(j) = feature_idx;
-          % figure(1);
-          % hold on;
+          figure(1);
+          hold on;
           plot([map(1,i); map(1,feature_idx)], [map(2,i); map(2, feature_idx)], 'b');
-          % keyboard;
+          keyboard;
         end
     end
     
