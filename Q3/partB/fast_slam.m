@@ -81,33 +81,37 @@ for t=2:length(T)
     meas_ind = [];
     for i=1:M
         if(inview(map(:,i),xr(:,t),rmax,thmax))
-          descriptor = normrnd(i, sqrt(0.1));
-          feature_idx = round(descriptor);
-          % wrap-around for array protection
-          if feature_idx < 1
-            feature_idx = feature_idx + M;
-          elseif feature_idx > M
-            feature_idx = feature_idx - M;
-          end
-          if not(feature_idx == i)
-            % figure(1);
-            % hold on;
-            % plot([map(1,i); map(1,feature_idx)], [map(2,i); map(2, feature_idx)], 'b');
-            % keyboard;
-          end
-
-          meas_ind=[meas_ind,feature_idx];
+          meas_ind = [meas_ind, i];
         end
     end
     
     % Take measurements
     y = [];
-    for i = meas_ind
+    for j = [1:length(meas_ind)]
+        i = meas_ind(j);
         % Select a measurement disturbance
         delta = QiE*sqrt(Qie)*randn(m,1);
         % Determine measurement, add to measurement vector
         y = [y, [sqrt((map(1,i)-xr(1,t))^2 + (map(2,i)-xr(2,t))^2);
-            mod(atan2(map(2,i)-xr(2,t),map(1,i)-xr(1,t))-xr(3,t)+pi,2*pi)-pi] + delta];
+                 mod(atan2(map(2,i)-xr(2,t),map(1,i)-xr(1,t))-xr(3,t)+pi,2*pi)-pi] + delta];
+
+        descriptor = normrnd(i, sqrt(0.1));
+        feature_idx = round(descriptor);
+        % wrap-around for array protection
+        if feature_idx < 1
+          feature_idx = feature_idx + M;
+        elseif feature_idx > M
+          feature_idx = feature_idx - M;
+        end
+
+        % does the measured feature index need to be changed?
+        if not(feature_idx == i)
+          meas_ind(j) = feature_idx;
+          % figure(1);
+          % hold on;
+          plot([map(1,i); map(1,feature_idx)], [map(2,i); map(2, feature_idx)], 'b');
+          % keyboard;
+        end
     end
     
     
