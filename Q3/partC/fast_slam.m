@@ -163,7 +163,7 @@ for t=2:length(T)
         j = j + 1;
       end
     end
-    
+    % keyboard;
     %% Fast SLAM Filter Estimation
 
     for d=1:D
