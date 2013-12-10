@@ -11,7 +11,11 @@ for delivery_idx = [1:length(drop_nodes)]
   entry = struct;
   entry.delivery_idx = delivery_idx;
   entry.start_time = delivery_idx*5;
-  entry.depot_idx = 2 - mod(delivery_idx, 2);
+  if delivery_idx < 6
+    entry.depot_idx = 1;
+  else
+    entry.depot_idx = 2;
+  end
   entry.drop_idx = delivery_idx;
   entry.color = color_strings(delivery_idx);
   future_deliveries = cat(1, future_deliveries, entry);
@@ -24,8 +28,8 @@ returns_in_flight = [];
 cur_time = 0;
 total_flight_time = 0;
 
-while length(future_deliveries) > 0 || length(deliveries_in_flight) > 0 || length(returns_in_flight) > 0
-% while cur_time < 39
+% while length(future_deliveries) > 0 || length(deliveries_in_flight) > 0 || length(returns_in_flight) > 0
+while cur_time < 39
   % check for new deliveries
   i = 1;
   while i <= length(future_deliveries)
@@ -62,7 +66,7 @@ while length(future_deliveries) > 0 || length(deliveries_in_flight) > 0 || lengt
       connections = releasePathFromConnections(delivery.aquired_connections, connections);
       % make a new path home
       path = findPath(connections, drop_nodes(delivery.drop_idx), depot_nodes(delivery.depot_idx));
-      % plotPath(path, length(node_locations), node_locations, delivery.color);
+      %plotPath(path, length(node_locations), node_locations, delivery.color);
       [connections aquired_connections] = aquirePathFromConnections(path, connections);
       flight_time = getFlightTime(path);
       total_flight_time = total_flight_time + flight_time;
@@ -109,5 +113,5 @@ for i = [1:length(returns_in_flight)]
   plotPath(delivery.path, length(node_locations), node_locations, delivery.color);
 end
 
-total_flight_time
+% total_flight_time
 
